@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PresuntoTech™ Runner — Campanha Cyberpunk</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --neon:#00fff0; --neon2:#00cfc3; --red:#ff3b3b; --bg:#0a0f14; --card:#0f1720; --txt:#d6fbff;
+    --ground:#2a2a2a; --sky:#0c1016;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 20% -10%, #121a22 0%, var(--bg) 60%) fixed;
+       color:var(--txt);font-family:"Press Start 2P", monospace;text-align:center; user-select:none}
+  h1{color:var(--red);text-shadow:0 0 14px #3a0000,0 0 24px var(--red);letter-spacing:2px;margin:10px 0}
+  .btn{display:inline-block;padding:10px 14px;margin:6px;border:2px solid var(--neon);color:var(--neon);
+       background:transparent;cursor:pointer;box-shadow:0 0 12px rgba(0,255,240,.25), inset 0 0 10px rgba(0,255,240,.15)}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 0 18px rgba(0,255,240,.45), inset 0 0 16px rgba(0,255,240,.25)}
+  .btn.solid{background:var(--neon);color:#001212;border-color:var(--neon)}
+  .btn.red{border-color:var(--red);color:var(--red)}
+  .wrap{max-width:1080px;margin:0 auto;padding:14px}
+  .panel{background:linear-gradient(180deg,#0d141c,#0a1118 60%,#0a0f14);border:2px solid #0e2c33;border-radius:14px;padding:14px;margin:12px auto}
+  .hudline{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:10px}
+  .chip{padding:8px 12px;border:2px solid #0e2c33;border-radius:10px;background:#0d1620;color:var(--neon); font-size:12px}
+  .tabs{display:flex;gap:6px;justify-content:center;margin:8px 0}
+  .tab{padding:8px 12px;border:2px solid #0e2c33;border-radius:10px;background:#0d1620;color:#8ff;cursor:pointer}
+  .tab.active{outline:2px solid var(--neon)}
+  .grid{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+  .card{width:250px;background:var(--card);border:2px solid #0e2c33;border-radius:12px;padding:12px;position:relative}
+  .tag{position:absolute;right:8px;top:8px;font-size:10px;background:#1a2530;border:1px solid #2a3d4a;border-radius:6px;padding:3px 6px}
+  .spriteBox{width:120px;height:120px;margin:8px auto;border:2px solid #06252b;border-radius:8px;background:#07131a;display:grid;place-items:center;overflow:hidden}
+  .selected{outline:2px solid var(--neon);box-shadow:0 0 14px rgba(0,255,240,.35)}
+  canvas{background:linear-gradient(#0b1118,#0a0f14);display:block;margin:0 auto;border-top:2px solid #20313a;border-bottom:2px solid #20313a}
+  #gameUI{position:relative;max-width:1080px;margin:6px auto}
+  .gameHud{display:flex;justify-content:space-between;gap:8px;color:var(--neon);font-size:12px}
+  .leftHud,.rightHud{display:flex;gap:10px;flex-wrap:wrap}
+  #levelBanner{position:absolute;left:50%;top:10px;transform:translateX(-50%);background:#081017e6;border:2px solid var(--neon);
+    padding:10px 14px;border-radius:12px; display:none}
+  #gameOverBox{display:none;position:absolute;inset:0;align-items:center;justify-content:center}
+  #gameOverBox .box{background:#081017cc;border:2px solid var(--neon);padding:18px;border-radius:12px}
+  .floating{position:absolute;color:#9f9;text-shadow:0 0 6px rgba(0,255,0,.4);pointer-events:none;animation:rise .8s ease-out forwards}
+  @keyframes rise{to{transform:translateY(-24px);opacity:0}}
+  small{opacity:.8}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- MENU -->
+  <div id="menu" class="panel">
+    <h1>RESGATE MECÂNICO</h1>
+    <p>Escolha o modo:</p>
+    <button class="btn" onclick="escolherJogadores(1)">1 PLAYER</button>
+    <button class="btn" onclick="escolherJogadores(2)">2 PLAYERS</button>
+    <button class="btn" onclick="escolherJogadores(3)">3 PLAYERS</button>
+    <div style="margin-top:8px"><small>Controles: P1 ↑/ESPAÇO • P2 W/F • P3 I/P • [ESC] Pausa</small></div>
+  </div>
+
+  <!-- LOJA / SKINS / CUSTOM -->
+  <div id="loja" class="panel" style="display:none;">
+    <div class="hudline">
+      <div class="chip">💰 FatCoins: <span id="fatcoins">0</span></div>
+      <div class="chip">Jogadores: <span id="jogadores">1</span> • Selecionados: <span id="pickCount">0</span></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" id="tabChars" onclick="setTab('chars')">Personagens</div>
+      <div class="tab" id="tabSkins" onclick="setTab('skins')">Skins</div>
+      <div class="tab" id="tabCustom" onclick="setTab('custom')">Customização</div>
+    </div>
+
+    <div id="panelChars">
+      <h2>Loja & Seleção</h2>
+      <p><small>Hérmes grátis • Carlos 2.000 • Caio 10.000</small></p>
+      <div id="cardsChars" class="grid"></div>
+    </div>
+
+    <div id="panelSkins" style="display:none;">
+      <h2>Skins Premium</h2>
+      <p><small>Compre para liberar visuais jogáveis.</small></p>
+      <div id="cardsSkins" class="grid"></div>
+    </div>
+
+    <div id="panelCustom" style="display:none;">
+      <h2>Customização</h2>
+      <p><small>Itens aparecem no personagem durante o jogo.</small></p>
+      <div id="cardsItems" class="grid"></div>
+      <div style="margin-top:10px"><small>Dica: selecione o personagem (aba Personagens/Skins) e depois equipe itens aqui.</small></div>
+    </div>
+
+    <div style="margin-top:12px">
+      <button class="btn" onclick="limparSelecao()">Limpar Seleção</button>
+      <button class="btn red" onclick="resetarProgresso()">Resetar Progresso</button>
+      <button class="btn solid" onclick="iniciarJogo()">▶ Iniciar Jogo</button>
+    </div>
+
+    <details style="margin-top:10px">
+      <summary><small>⚙️ Painel de teste</small></summary>
+      <div style="margin-top:6px">
+        <button class="btn" onclick="ganhar(100)">+100 (Drone)</button>
+        <button class="btn" onclick="ganhar(500)">+500 (Soldado)</button>
+        <button class="btn" onclick="ganhar(1000)">+1000 (HAM)</button>
+      </div>
+    </details>
+  </div>
+
+  <!-- GAME -->
+  <div id="game" style="display:none;">
+    <div id="gameUI">
+      <div class="gameHud">
+        <div class="leftHud">
+          <div>💰 <span id="hudFat">0</span></div>
+          <div>⚡ Score: <span id="hudScore">0</span></div>
+          <div>🛡️ Vivos: <span id="hudAlive">0</span></div>
+        </div>
+        <div class="rightHud">
+          <div>🗡️ Restantes: <span id="hudRemain">0</span></div>
+          <div>📛 Nível: <span id="hudLevel">1</span></div>
+          <div>[ESC] Pausar</div>
+        </div>
+      </div>
+      <div id="levelBanner"></div>
+      <canvas id="cv" width="1024" height="480"></canvas>
+      <div id="gameOverBox">
+        <div class="box">
+          <h2>GAME OVER</h2>
+          <p>Score: <span id="overScore">0</span> • FatCoins: <span id="overFat">0</span></p>
+          <button class="btn solid" onclick="tryAgain()">Try Again</button>
+          <button class="btn" onclick="voltarMenu()">Menu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* 
+======================== ASSETS QUE VOCÊ PRECISA SALVAR ========================
+Personagens base:  hermes.png, carlos.png, caio.png, lux.png
+Skins:             hermes-upgraded.png, carlos-upgraded.png, caio-upgraded.png
+Itens:             capacete.png, laser-pistol.png, tenis.png, cybercar.png, jetpack.png, shield.png, katana.png
+Projéteis:         bullet.png, enemy-bullet.png
+Inimigos Nível 1:  drone-ham.png, soldado-ham.png, ham.png
+Inimigos Nível 2:  drone2.png, soldado2.png, boss-omega.png
+Níveis 3+ (opcionais, vai expandindo): drone3.png, soldado3.png, boss3.png, drone4.png, ...
+Moeda:             coin.png
+(Se faltar algum arquivo, o jogo usa placeholders.)
+===============================================================================
+*/
+
+const PRICES_CHAR = { hermes:0, carlos:2000, caio:10000, lux:5000 };
+const PRICES_SKIN = { "hermes-upgraded":3000, "carlos-upgraded":4000, "caio-upgraded":12000 };
+const PRICES_ITEM = { capacete:500, "laser-pistol":800, tenis:700, cybercar:5000, jetpack:3000, shield:2000, katana:2500 };
+
+const NAMES = { hermes:"Hérmes", carlos:"Carlos", caio:"Caio", lux:"Lux",
+  "hermes-upgraded":"Hérmes Atualizado", "carlos-upgraded":"Carlos Atualizado", "caio-upgraded":"Caio Atualizado"
+};
+
+const EARN = { drone:100, soldier:500, boss:1000 }; // FatCoins por kill
+const COIN_SCORE = 100;
+
+let fatcoins = parseInt(localStorage.getItem("fatcoins")) || 0;
+let ownedChars = JSON.parse(localStorage.getItem("ownedChars")) || ["hermes"];
+let ownedSkins = JSON.parse(localStorage.getItem("ownedSkins")) || [];
+let ownedItems = JSON.parse(localStorage.getItem("ownedItems")) || []; // itens liberados globalmente
+let equipByChar = JSON.parse(localStorage.getItem("equipByChar")) || {}; // { charId: { helmet:true, ... } }
+
+let jogadores = 1;
+let selecionados = []; // ["hermes", "carlos", ...] pode ser base ou skin
+
+const $ = q => document.querySelector(q);
+const $$ = q => document.querySelectorAll(q);
+
+function salvar(){
+  localStorage.setItem("fatcoins", fatcoins);
+  localStorage.setItem("ownedChars", JSON.stringify(ownedChars));
+  localStorage.setItem("ownedSkins", JSON.stringify(ownedSkins));
+  localStorage.setItem("ownedItems", JSON.stringify(ownedItems));
+  localStorage.setItem("equipByChar", JSON.stringify(equipByChar));
+}
+
+/* ---------- LOJA UI ---------- */
+function renderHUDLoja(){
+  $("#fatcoins").textContent = fatcoins.toLocaleString("pt-BR");
+  $("#pickCount").textContent = selecionados.length;
+  $("#jogadores").textContent = jogadores;
+}
+
+function setTab(which){
+  $("#tabChars").classList.toggle("active", which==="chars");
+  $("#tabSkins").classList.toggle("active", which==="skins");
+  $("#tabCustom").classList.toggle("active", which==="custom");
+  $("#panelChars").style.display = (which==="chars")?"block":"none";
+  $("#panelSkins").style.display = (which==="skins")?"block":"none";
+  $("#panelCustom").style.display = (which==="custom")?"block":"none";
+}
+
+function cardTemplate(id, name, price, owned, type){
+  const ownedTxt = owned ? "Desbloqueado" : "Bloqueado";
+  const btnTxt   = owned ? (type==="item" ? "Equipar/Remover" : "Selecionar") : `Comprar (${price.toLocaleString("pt-BR")})`;
+  return `
+    <span class="tag">${ownedTxt}</span>
+    <div class="spriteBox">
+      <img src="${id}.png" alt="${name}" width="110" onerror="this.style.display='none';this.parentElement.appendChild(makePh('${id}'));">
+    </div>
+    <h3 style="margin:6px 0">${name}</h3>
+    <p style="margin:6px 0; color:${owned?'#9f9':'#a8f'}">${owned? 'Pronto pra ação ✅' : 'Preço: '+price.toLocaleString('pt-BR')+' FatCoins'}</p>
+    <button class="btn" onclick="shopAction('${id}','${type}')">${btnTxt}</button>
+  `;
+}
+function montarLoja(){
+  // personagens base
+  const contChars = $("#cardsChars"); contChars.innerHTML = "";
+  ["hermes","carlos","caio","lux"].forEach(id=>{
+    const owned = ownedChars.includes(id);
+    const el = document.createElement("div"); el.className="card"; el.dataset.id=id;
+    el.innerHTML = cardTemplate(id, NAMES[id], PRICES_CHAR[id], owned, "char");
+    contChars.appendChild(el);
+  });
+  // skins
+  const contSkins = $("#cardsSkins"); contSkins.innerHTML = "";
+  Object.keys(PRICES_SKIN).forEach(id=>{
+    const owned = ownedSkins.includes(id);
+    const el = document.createElement("div"); el.className="card"; el.dataset.id=id;
+    el.innerHTML = cardTemplate(id, NAMES[id], PRICES_SKIN[id], owned, "skin");
+    contSkins.appendChild(el);
+  });
+  // itens
+  const contItems = $("#cardsItems"); contItems.innerHTML = "";
+  Object.keys(PRICES_ITEM).forEach(id=>{
+    const owned = ownedItems.includes(id);
+    const label = id.replace("-", " ");
+    const el = document.createElement("div"); el.className="card"; el.dataset.id=id;
+    el.innerHTML = cardTemplate(id, label, PRICES_ITEM[id], owned, "item");
+    contItems.appendChild(el);
+  });
+  // marcar selecionados
+  selecionados.forEach(id=>{
+    [...$$(".card")].forEach(c=>{ if(c.dataset.id===id) c.classList.add("selected"); });
+  });
+}
+
+function shopAction(id, type){
+  if(type==="char"){
+    // compra
+    if(!ownedChars.includes(id)){
+      const price = PRICES_CHAR[id];
+      if(fatcoins < price){ alert("FatCoins insuficientes!"); return; }
+      fatcoins -= price; ownedChars.push(id); salvar(); renderHUDLoja(); montarLoja();
+      alert(`${NAMES[id]} desbloqueado!`);
+      return;
+    }
+    // selecionar
+    if(selecionados.length>=jogadores){ alert("Todos os jogadores já escolheram!"); return; }
+    selecionados.push(id);
+    // destaque
+    [...$$(".card")].forEach(c=>{ if(c.dataset.id===id) c.classList.add("selected"); });
+    renderHUDLoja();
+  }
+  if(type==="skin"){
+    if(!ownedSkins.includes(id)){
+      const price = PRICES_SKIN[id];
+      if(fatcoins < price){ alert("FatCoins insuficientes!"); return; }
+      fatcoins -= price; ownedSkins.push(id); salvar(); renderHUDLoja(); montarLoja();
+      alert(`${NAMES[id]} desbloqueada!`);
+      return;
+    }
+    if(selecionados.length>=jogadores){ alert("Todos os jogadores já escolheram!"); return; }
+    selecionados.push(id);
+    [...$$(".card")].forEach(c=>{ if(c.dataset.id===id) c.classList.add("selected"); });
+    renderHUDLoja();
+  }
+  if(type==="item"){
+    if(!ownedItems.includes(id)){
+      const price = PRICES_ITEM[id];
+      if(fatcoins < price){ alert("FatCoins insuficientes!"); return; }
+      fatcoins -= price; ownedItems.push(id); salvar(); renderHUDLoja(); montarLoja();
+      alert(`${id.replace("-"," ")} comprado! Agora equipe no personagem (fica salvo por personagem).`);
+      return;
+    }
+    // toggle equip no último selecionado (se houver)
+    const current = selecionados[selecionados.length-1] || selecionados[0];
+    if(!current){ alert("Selecione um personagem/skin primeiro na aba Personagens/Skins."); return; }
+    equipByChar[current] = equipByChar[current] || {};
+    equipByChar[current][id] = !equipByChar[current][id];
+    salvar();
+    alert(`${id.replace("-"," ")} ${equipByChar[current][id]?'equipado':'removido'} em ${current}!`);
+  }
+}
+
+function escolherJogadores(n){
+  jogadores=n; selecionados=[];
+  $("#menu").style.display="none";
+  $("#loja").style.display="block";
+  renderHUDLoja(); montarLoja();
+}
+
+function limparSelecao(){ selecionados=[]; [...$$(".card")].forEach(c=>c.classList.remove("selected")); renderHUDLoja(); }
+function resetarProgresso(){
+  if(!confirm("Zerar FatCoins e tudo comprado?")) return;
+  fatcoins=0; ownedChars=["hermes"]; ownedSkins=[]; ownedItems=[]; equipByChar={}; selecionados=[];
+  salvar(); renderHUDLoja(); montarLoja();
+}
+function ganhar(q){ fatcoins+=q; salvar(); renderHUDLoja(); }
+function setTabStartup(){ setTab('chars'); }
+
+function iniciarJogo(){
+  if(selecionados.length<jogadores){ alert("Selecione todos os jogadores primeiro!"); return; }
+  $("#loja").style.display="none";
+  $("#game").style.display="block";
+  startGame();
+}
+function voltarMenu(){ location.reload(); }
+
+/* ---------- PLACEHOLDER IMG ---------- */
+const imgCache = {};
+function loadImage(src){ return new Promise(res=>{ const im=new Image(); im.src=src; im.onload=()=>res(im); im.onerror=()=>res(null); }); }
+function makePh(id){
+  const c=document.createElement("canvas"); c.width=110; c.height=110; const g=c.getContext("2d");
+  const color = id.includes("hermes")?"#0ff":id.includes("carlos")?"#0f0":id.includes("caio")?"#f0f":
+                id.includes("lux")?"#ff0":id.includes("drone")?"#8ff":id.includes("sold")?"#9f9":
+                id.includes("boss")||id.includes("ham")?"#f88":id.includes("bullet")?"#fff":"#777";
+  g.fillStyle=color; g.fillRect(10,10,90,90); g.fillStyle="#000"; g.fillRect(35,40,10,10); g.fillRect(65,40,10,10);
+  g.fillStyle="#222"; g.fillRect(30,70,50,12); return c;
+}
+async function ensureImages(list, cb){
+  let left=list.length; if(!left){cb();return;}
+  for(const src of list){
+    if(imgCache[src]!==undefined){ if(--left===0) cb(); continue; }
+    const ok = await loadImage(src);
+    imgCache[src] = ok || makeImgPhCanvas(src);
+    if(--left===0) cb();
+  }
+}
+function makeImgPhCanvas(src){
+  const c=document.createElement("canvas"); c.width=64; c.height=64; const g=c.getContext("2d");
+  const color = src.includes("hermes")?"#0ff":src.includes("carlos")?"#0f0":src.includes("caio")?"#f0f":
+                src.includes("lux")?"#ff0":src.includes("drone")?"#8ff":src.includes("sold")?"#9f9":
+                src.includes("boss")||src.includes("ham")?"#f88":src.includes("bullet")?"#fff":"#777";
+  g.fillStyle=color; g.fillRect(0,0,64,64); return c;
+}
+
+/* ---------- GAME CORE ---------- */
+let cv, ctx, groundY;
+let t=0, score=0, paused=false, ended=false, rafId;
+
+let players=[], enemies=[], coins=[], bullets=[], eBullets=[], floaters=[];
+let level=1, remain=50, boss=null, bossHP=0;
+
+const KEYS = { P1:{jump:"ArrowUp", shoot:"Space"}, P2:{jump:"KeyW", shoot:"KeyF"}, P3:{jump:"KeyI", shoot:"KeyP"} };
+const keyState = {};
+document.addEventListener("keydown", e=>{ keyState[e.code]=true; if(e.code==="Escape"){togglePause();} });
+document.addEventListener("keyup", e=>{ keyState[e.code]=false; });
+
+function startGame(){
+  cv=$("#cv"); ctx=cv.getContext("2d");
+  groundY=cv.height-78;
+  resetRun();
+  const need = [
+    "hermes.png","carlos.png","caio.png","lux.png",
+    "hermes-upgraded.png","carlos-upgraded.png","caio-upgraded.png",
+    "capacete.png","laser-pistol.png","tenis.png","cybercar.png","jetpack.png","shield.png","katana.png",
+    "bullet.png","enemy-bullet.png","coin.png",
+    "drone-ham.png","soldado-ham.png","ham.png","drone2.png","soldado2.png","boss-omega.png"
+  ];
+  ensureImages(need, ()=> loop());
+}
+
+function resetRun(){
+  t=0; score=0; paused=false; ended=false; enemies=[]; coins=[]; bullets=[]; eBullets=[]; floaters=[];
+  level = 1; remain = 50; boss=null; bossHP=0;
+  spawnPlayers();
+  updateHUD();
+  banner(`Nível ${level} — Elimine ${remain} robôs!`);
+}
+
+function spawnPlayers(){
+  players=[];
+  let x=140;
+  selecionados.slice(0,jogadores).forEach((id,idx)=>{
+    const keyset = idx===0?KEYS.P1 : idx===1?KEYS.P2 : KEYS.P3;
+    const baseSprite = imgCache[(id.includes("-upgraded")||id==="lux")? `${id}.png` : `${id}.png`];
+    const equips = equipByChar[id] || {};
+    players.push({
+      id, x, y:groundY-64, w:52, h:64, vy:0, onGround:true, alive:true,
+      jumpKey:keyset.jump, shootKey:keyset.shoot,
+      fireCD:0, fireRate: (equips["laser-pistol"]? 0.15:0.25), bulletSpd:(equips["laser-pistol"]? 14:10),
+      sprite: baseSprite, equips,
+      shield: equips["shield"]?1:0, hover: equips["jetpack"]?1:0, katana: !!equips["katana"],
+      car: !!equips["cybercar"], jumpForce: equips["tenis"]? -14 : -12, color: pickColor(id)
+    });
+    x += 100;
+  });
+}
+function pickColor(id){
+  if(id.includes("hermes")) return "#0ff";
+  if(id.includes("carlos")) return "#0f0";
+  if(id.includes("caio"))   return "#f0f";
+  if(id.includes("lux"))    return "#ff0";
+  return "#9cf";
+}
+
+function togglePause(){
+  if(ended) return;
+  paused = !paused;
+  if(!paused) loop();
+}
+
+function loop(){
+  if(paused || ended) return;
+  rafId = requestAnimationFrame(loop);
+  update(1/60);
+  render();
+}
+
+function updateHUD(){
+  $("#hudFat").textContent = fatcoins.toLocaleString("pt-BR");
+  $("#hudScore").textContent = score.toString();
+  $("#hudAlive").textContent = players.filter(p=>p.alive).length;
+  $("#hudRemain").textContent = boss? `CHEFÃO (${bossHP} HP)` : remain.toString();
+  $("#hudLevel").textContent = level.toString();
+}
+
+function banner(text){
+  const el=$("#levelBanner");
+  el.textContent = text; el.style.display="block";
+  setTimeout(()=>{ el.style.display="none"; }, 1800);
+}
+
+function spawnEnemy(){
+  if(boss || remain<=0) return;
+  const pool = level===1 ? [
+    {type:"drone-ham.png", w:46,h:36, fly:true, speed:4.5, yMin:groundY-220, yMax:groundY-120, value:EARN.drone, shoot:false},
+    {type:"soldado-ham.png", w:48,h:56, ground:true, speed:4.0, value:EARN.soldier, shoot:true, fireEvery:1.8}
+  ] : [
+    {type:`drone${Math.min(level,5)}.png`.replace("1","-ham"), w:48,h:38, fly:true, speed:4.8+level*0.1, yMin:groundY-220, yMax:groundY-120, value:EARN.drone+level*10, shoot:true, fireEvery:2.2 - Math.min(1.2, level*0.05)},
+    {type:`soldado${Math.min(level,5)}.png`.replace("1","-ham"), w:50,h:58, ground:true, speed:4.2+level*0.12, value:EARN.soldier+level*20, shoot:true, fireEvery:2.0 - Math.min(1.0, level*0.04)}
+  ];
+  const def = pool[Math.floor(Math.random()*pool.length)];
+  const e = { x: cv.width+40, y: groundY-def.h, w:def.w, h:def.h, speed:def.speed, value:def.value, src:guessEnemySrc(def.type),
+              fly:!!def.fly, ground:!!def.ground, shoot:!!def.shoot, fireEvery:def.fireEvery||999, t:0, hp:1+Math.floor((level-1)/3) };
+  if(e.fly){ e.y = rand(def.yMin, def.yMax); }
+  enemies.push(e);
+}
+function guessEnemySrc(name){
+  // tenta casar com arquivos existentes; cai para placeholders
+  const candidates = [name, name.replace(".png","-ham.png")];
+  for(const c of candidates){ if(imgCache[c]) return c; }
+  return candidates[0];
+}
+
+function spawnBoss(){
+  if(boss) return;
+  let src, baseHP;
+  if(level===1){ src="ham.png"; baseHP=10; }
+  else if(level===2){ src="boss-omega.png"; baseHP=14; }
+  else { src=`boss${Math.min(level,9)}.png`; baseHP=14+ (level-2)*3; }
+  bossHP = baseHP;
+  boss = { x: cv.width-200, y: groundY-120, w:120, h:120, speed:2.2+level*0.05, src, fireEvery:1.2 - Math.min(.6, level*0.03), t:0 };
+  banner("CHEFÃO APARECEU!");
+}
+
+function spawnCoin(){
+  if(Math.random()<0.6){
+    const y = rand(groundY-200, groundY-120);
+    coins.push({x: cv.width+40, y, w:28, h:28});
+  }
+}
+
+function update(dt){
+  t+=dt;
+  // spawns
+  if(!boss && remain>0 && t%0.8<dt) spawnEnemy();
+  if(t%0.9<dt) spawnCoin();
+  if(remain<=0 && !boss) spawnBoss();
+
+  // players
+  for(const p of players){
+    if(!p.alive) continue;
+    // jump / hover
+    if(keyState[p.jumpKey]){
+      if(p.onGround){ p.vy = p.jumpForce; p.onGround=false; }
+      else if(p.hover){ p.vy -= 0.25; } // jetpack
+    }
+    // shoot
+    p.fireCD = Math.max(0, p.fireCD - dt);
+    if(keyState[p.shootKey] && p.fireCD<=0){
+      shoot(p);
+      p.fireCD = p.fireRate;
+    }
+    // gravity
+    p.vy += 0.6;
+    p.y += p.vy;
+    if(p.y + p.h >= groundY){ p.y = groundY - p.h; p.vy=0; p.onGround=true; }
+
+    // katana melee aura (curta distância)
+    if(p.katana){
+      for(let i=enemies.length-1;i>=0;i--){
+        const e=enemies[i];
+        if(Math.abs((p.x+p.w/2)-(e.x+e.w/2))<40 && Math.abs((p.y+p.h/2)-(e.y+e.h/2))<40){
+          enemies.splice(i,1); remain=Math.max(0,remain-1); addFloater(e.x,e.y,"斬 +"+e.value);
+          fatcoins += e.value; salvar();
+        }
+      }
+    }
+  }
+
+  // bullets (players)
+  for(let i=bullets.length-1;i>=0;i--){
+    const b=bullets[i]; b.x+=b.vx;
+    // vs enemies
+    for(let j=enemies.length-1;j>=0;j--){
+      const e=enemies[j];
+      if(aabb(b,e)){
+        bullets.splice(i,1);
+        e.hp--; if(e.hp<=0){ enemies.splice(j,1); remain=Math.max(0,remain-1);
+          addFloater(e.x,e.y,"+"+e.value); fatcoins+=e.value; salvar(); }
+        break;
+      }
+    }
+    // vs boss
+    if(boss && aabb(b,boss)){
+      bullets.splice(i,1);
+      bossHP--; addFloater(boss.x+boss.w/2, boss.y, "-1");
+      if(bossHP<=0){ // boss down -> next level
+        boss=null; levelUp();
+        return; // break update early for banner
+      }
+    }
+    if(b.x>cv.width+80) bullets.splice(i,1);
+  }
+
+  // enemies move & shoot
+  for(let i=enemies.length-1;i>=0;i--){
+    const e=enemies[i];
+    e.x -= e.speed;
+    e.t += dt;
+    if(e.shoot && e.t >= e.fireEvery){
+      e.t=0; enemyShoot(e);
+    }
+    if(e.x<-80){ enemies.splice(i,1); }
+    // hit players
+    for(const p of players){ if(!p.alive) continue;
+      if(aabb(p,e)){
+        if(p.car){ // carro atropela
+          enemies.splice(i,1); remain=Math.max(0,remain-1);
+          addFloater(e.x,e.y,"🚗 +"+e.value); fatcoins+=e.value; salvar();
+        } else if(p.shield>0){ p.shield=0; addFloater(p.x,p.y,"🛡️"); } 
+        else { p.alive=false; addFloater(p.x,p.y,"💥"); }
+      }
+    }
+  }
+
+  // boss behavior
+  if(boss){
+    boss.t += dt;
+    boss.x -= boss.speed * 0.6;
+    if(boss.x < cv.width-340) boss.x = cv.width-340 + Math.sin(t*1.5)*30;
+    if(boss.t >= Math.max(0.5, boss.fireEvery)){ boss.t=0; enemyShoot(boss,true); }
+    for(const p of players){ if(!p.alive) continue;
+      if(aabb(p,boss)){
+        if(p.car){ addFloater(boss.x,boss.y,"🚗"); bossHP=Math.max(1,bossHP-1); }
+        else if(p.shield>0){ p.shield=0; addFloater(p.x,p.y,"🛡️"); }
+        else { p.alive=false; addFloater(p.x,p.y,"💥"); }
+      }
+    }
+  }
+
+  // enemy bullets
+  for(let i=eBullets.length-1;i>=0;i--){
+    const b=eBullets[i]; b.x += b.vx; b.y += b.vy;
+    if(b.x<-60 || b.y< -60 || b.y>cv.height+60){ eBullets.splice(i,1); continue; }
+    for(const p of players){ if(!p.alive) continue;
+      if(aabb(p,b)){
+        eBullets.splice(i,1);
+        if(p.shield>0){ p.shield=0; addFloater(p.x,p.y,"🛡️"); }
+        else { p.alive=false; addFloater(p.x,p.y,"💥"); }
+        break;
+      }
+    }
+  }
+
+  // coins
+  for(let i=coins.length-1;i>=0;i--){
+    const c=coins[i]; c.x -= 4.0;
+    for(const p of players){ if(!p.alive) continue;
+      if(aabb(p,c)){ coins.splice(i,1); score += COIN_SCORE; addFloater(c.x,c.y,"+100"); break; }
+    }
+    if(c.x<-40) coins.splice(i,1);
+  }
+
+  // score over time
+  score += 1;
+  updateHUD();
+
+  // end?
+  if(players.every(p=>!p.alive)) endGame();
+}
+
+function render(){
+  // bg
+  ctx.fillStyle="#0b1218"; ctx.fillRect(0,0,cv.width,cv.height);
+  // parallax
+  ctx.fillStyle="#0f1b25"; for(let x=0;x<cv.width;x+=60){ ctx.fillRect((x - (t*40)%60), 260, 30, 2); }
+  // ground
+  ctx.fillStyle="#2a2a2a"; ctx.fillRect(0,groundY,cv.width, cv.height-groundY);
+  ctx.fillStyle="#3a3a3a"; for(let x=0;x<cv.width;x+=40){ ctx.fillRect((x - (t*120)%40), groundY-6, 20, 3); }
+
+  // coins
+  for(const c of coins){
+    const im = imgCache["coin.png"]; if(im) ctx.drawImage(im, c.x, c.y, c.w, c.h); else { ctx.fillStyle="#ff0"; ctx.beginPath(); ctx.arc(c.x+14,c.y+14,14,0,Math.PI*2); ctx.fill(); }
+  }
+  // enemies
+  for(const e of enemies){
+    const im = imgCache[e.src] || imgCache["soldado-ham.png"]; ctx.drawImage(im, e.x, e.y, e.w, e.h);
+  }
+  // boss
+  if(boss){
+    const im = imgCache[boss.src] || imgCache["ham.png"]; ctx.drawImage(im, boss.x, boss.y, boss.w, boss.h);
+    // boss hp bar
+    ctx.fillStyle="#400"; ctx.fillRect(boss.x, boss.y-10, boss.w, 6);
+    ctx.fillStyle="#f44"; ctx.fillRect(boss.x, boss.y-10, Math.max(0, boss.w*(bossHP/Math.max(1,(10+(level-1)*3)))), 6);
+  }
+  // enemy bullets
+  for(const b of eBullets){
+    const im = imgCache["enemy-bullet.png"]; if(im) ctx.drawImage(im, b.x, b.y, b.w, b.h); else { ctx.fillStyle="#f66"; ctx.fillRect(b.x,b.y,b.w,b.h); }
+  }
+  // players (with equipment overlays)
+  for(const p of players){
+    if(!p.alive) { ctx.globalAlpha=0.4; }
+    const im = p.sprite; ctx.drawImage(im, p.x, p.y, p.w, p.h);
+    // equip overlays
+    if(p.equips["capacete"]){ drawEquip("capacete.png", p.x+10, p.y-4, 32, 20); }
+    if(p.equips["laser-pistol"]){ drawEquip("laser-pistol.png", p.x+p.w-18, p.y+22, 20, 12); }
+    if(p.equips["tenis"]){ drawEquip("tenis.png", p.x+6, p.y+p.h-8, 18, 10); drawEquip("tenis.png", p.x+28, p.y+p.h-8, 18, 10); }
+    if(p.equips["jetpack"]){ drawEquip("jetpack.png", p.x-10, p.y+14, 22, 28); }
+    if(p.equips["shield"] && p.shield>0){ drawShield(p); }
+    if(p.equips["katana"]){ drawEquip("katana.png", p.x-8, p.y+8, 18, 48); }
+    if(p.equips["cybercar"]){ drawEquip("cybercar.png", p.x-6, p.y+p.h-18, p.w+20, 22); }
+    ctx.globalAlpha=1;
+  }
+  // bullets
+  for(const b of bullets){
+    const im = imgCache["bullet.png"]; if(im) ctx.drawImage(im, b.x, b.y, b.w, b.h); else { ctx.fillStyle=b.color; ctx.fillRect(b.x,b.y,b.w,b.h); }
+  }
+}
+
+function drawEquip(src,x,y,w,h){ const im=imgCache[src]; if(im) ctx.drawImage(im,x,y,w,h); else { ctx.fillStyle="#888"; ctx.fillRect(x,y,w,h); } }
+function drawShield(p){ ctx.strokeStyle="#0ff"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(p.x+p.w/2, p.y+p.h/2, Math.max(p.w,p.h)/1.6, 0, Math.PI*2); ctx.stroke(); }
+
+function enemyShoot(e, isBoss=false){
+  const speed = isBoss? 6.0 : 5.0 + level*0.05;
+  const angle = (isBoss? (Math.random()*0.4-0.2) : (Math.random()*0.2-0.1));
+  eBullets.push({ x:e.x, y:e.y+e.h/2, w:16, h:8, vx: -speed, vy: angle*speed });
+}
+
+function shoot(p){
+  const spd = p.bulletSpd;
+  bullets.push({ x:p.x+p.w-4, y:p.y+22, w:18, h:8, vx: spd, color:p.color });
+}
+
+function aabb(a,b){
+  return a.x < b.x + b.w &&
+         a.x + a.w > b.x &&
+         a.y < b.y + b.h &&
+         a.y + a.h > b.y;
+}
+function rand(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+function levelUp(){
+  // recompensa e next
+  fatcoins += 2000 + level*250; salvar();
+  banner("🎉 Pã-pã-rã-rã... Você passou de nível!");
+  level += 1; remain = 50; boss=null; bossHP=0;
+}
+
+function endGame(){
+  ended=true; cancelAnimationFrame(rafId);
+  salvar();
+  $("#overScore").textContent = score;
+  $("#overFat").textContent = fatcoins.toLocaleString("pt-BR");
+  $("#gameOverBox").style.display="flex";
+}
+function tryAgain(){
+  $("#gameOverBox").style.display="none";
+  resetRun(); loop();
+}
+
+/* ---------- BOOT ---------- */
+function makePhForImgTag(id){ return makePh(id); }
+window.makePh = makePhForImgTag;
+
+$("#fatcoins").textContent = fatcoins.toLocaleString("pt-BR");
+setTabStartup(); renderHUDLoja(); montarLoja();
+
+/* Accessibility: evitar scroll por espaço */
+window.onkeydown = (e)=>{ if(e.code==="Space" && e.target===document.body){ e.preventDefault(); } };
+</script>
+</body>
+</html>
